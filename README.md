@@ -1,82 +1,73 @@
-# VaultLink Secure File Hosting (Dynamic Links)
+# VaultLink
 
-This version removes the old static hash-link model and uses a backend API for encrypted file storage.
+VaultLink is a dynamic encrypted file sharing app with:
+
+- **Frontend**: Next.js + TypeScript + Tailwind + Web Crypto API
+- **Backend**: Node.js + Express + TypeScript + MongoDB
+- **Encrypted file storage**: S3-compatible object storage
 
 ## Security Model
 
-- File encryption happens in the browser using **AES-256-GCM**.
-- A **new random AES key** is generated for every upload.
-- The encryption key is shown to the user and **never sent to the server**.
-- The server stores only:
-  - encrypted file bytes
-  - metadata (`fileId`, `iv`, expiry, download limits, counters, file info)
-- Each upload generates a **brand new random fileId** (`128-bit entropy`) and link:
-  - `https://domain.com/f/<fileId>`
+- Every upload generates a brand new random `fileId` (`128-bit` entropy).
+- Every upload generates a brand new random AES-256-GCM key in browser.
+- Encryption key is never sent to backend.
+- Backend stores only encrypted bytes + metadata.
+- Dynamic link format is `https://domain.com/f/<fileId>`.
 
-## Upload Flow
+## Tech Stack
 
-1. User selects a file (max `50MB`).
-2. Browser generates:
-   - random 256-bit AES-GCM key
-   - random 12-byte IV
-3. Browser encrypts file locally.
-4. Frontend uploads only encrypted bytes + metadata to `POST /api/upload`.
-5. Backend returns `{ fileId }`.
-6. Frontend constructs dynamic link `/f/<fileId>` and shows key separately.
+### Frontend (`frontend/`)
 
-## Download Flow
+- Next.js App Router
+- TypeScript
+- Tailwind CSS
+- Web Crypto API (`crypto.subtle`) for AES-GCM encryption/decryption
 
-When opening `/f/<fileId>`:
+### Backend (`backend/`)
 
-1. User pastes decryption key.
-2. Frontend requests encrypted data from `GET /api/file/:fileId`.
-3. Browser decrypts locally using AES-GCM.
-4. Browser triggers file download.
-
-Error conditions:
-
-- Wrong key → decryption error.
-- Expired file → server returns `410`.
-- Download limit reached → server returns `410`.
+- Node.js + Express
+- TypeScript
+- MongoDB (Mongoose)
+- Multer for encrypted file uploads
+- Rate limiting on file fetch route
 
 ## Backend API
 
 ### `POST /api/upload`
 
-Multipart form fields:
+Accepts multipart form data:
 
-- `encryptedFile` (required)
-- `iv` (base64, 12 bytes decoded)
-- `expiresInHours` (1..720)
-- `maxDownloads` (1..1000)
+- `encryptedFile`
+- `iv` (base64, 12 bytes)
+- `expiresInMinutes` (1-60)
+- `maxDownloads`
 - `originalName`
 - `originalType`
-- `originalSize` (1..50MB)
+- `originalSize`
 
-Response:
+Returns:
 
 ```json
-{ "fileId": "8f3a91c7d2e44a12b8f1e9c4a7b0d3f2" }
+{ "fileId": "<random-hex-id>" }
 ```
 
 ### `GET /api/file/:fileId`
 
-- Validates fileId format (`32 hex chars`).
-- Checks expiry and download limit.
-- Increments download counter on successful download.
-- Deletes file if expired or exhausted.
-- Returns encrypted bytes (`application/octet-stream`) and metadata headers:
-  - `X-File-Iv`
-  - `X-File-Name`
-  - `X-File-Type`
-  - `X-File-Size`
+- Validates secure `fileId`
+- Checks expiry and max downloads
+- Increments `downloadCount`
+- Returns encrypted bytes + metadata headers
+- Deletes expired/exhausted files
 
-## File Metadata Schema
+### `GET /api/health`
 
-Each record in `storage/metadata.json` stores:
+- Health check endpoint
+
+## Metadata Stored in MongoDB
 
 - `fileId`
-- `filePath`
+- `storageProvider` (`s3`)
+- `storageKey` (S3 object key)
 - `iv`
 - `createdAt`
 - `expiresAt`
@@ -86,44 +77,55 @@ Each record in `storage/metadata.json` stores:
 - `originalType`
 - `originalSize`
 
-## Expiry and Deletion Rules
+## Expiry/Deletion Rules
 
-File is deleted when:
+File is removed when:
 
-- `currentTime > expiresAt`
-- or `downloadCount >= maxDownloads`
+- `currentTime > expiresAt`, or
+- `downloadCount >= maxDownloads`
 
-Cleanup happens:
+Encrypted binary files are stored in S3-compatible object storage.
 
-- at startup (stale records)
-- on file-access checks
-- after final allowed download
+## Local Development
 
-## Security Controls
+### 1) Environment
 
-- AES-GCM only
-- Random IV per upload (12 bytes)
-- Random secure `fileId` from `crypto.randomBytes(16).toString('hex')`
-- Max file size enforced at frontend and backend (`50MB`)
-- MIME type validation on frontend and backend
-- Rate limiting on `GET /api/file/:fileId`
-- No encryption key logging or storage on backend
+Create a single root `.env` file with:
 
-## Run Locally
+```dotenv
+PORT=4000
+MONGODB_URI=mongodb://127.0.0.1:27017/vaultlink
+FRONTEND_ORIGIN=http://localhost:3000
+NEXT_PUBLIC_API_BASE_URL=http://localhost:4000
+
+# Required: S3-compatible storage (AWS S3, Cloudflare R2, Backblaze B2, MinIO, etc.)
+S3_REGION=ap-south-1
+S3_BUCKET=vaultlink-crypto
+S3_ENDPOINT=https://s3.ap-south-1.amazonaws.com
+S3_ACCESS_KEY_ID=...
+S3_SECRET_ACCESS_KEY=...
+S3_FORCE_PATH_STYLE=false
+```
+
+### 2) Install deps
 
 ```bash
 npm install
-npm start
+npm install --prefix backend
+npm install --prefix frontend
 ```
 
-Open:
+### 3) Start both apps
 
-- `http://localhost:3000/` for upload
-- `http://localhost:3000/f/<fileId>` for download
+```bash
+npm run dev
+```
 
-## Project Files
+Frontend: `http://localhost:3000`
 
-- `index.html` → frontend UI + browser-side crypto logic
-- `server.js` → Express backend API + storage lifecycle
-- `storage/files/` → encrypted file blobs (runtime)
-- `storage/metadata.json` → encrypted file metadata (runtime)
+Backend: `http://localhost:4000`
+
+## Project Structure
+
+- `frontend/` → Next.js TypeScript Tailwind app
+- `backend/` → Express TypeScript MongoDB API

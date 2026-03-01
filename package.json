@@ -1,18 +1,19 @@
 {
   "name": "vaultlink",
-  "version": "2.0.0",
-  "description": "Dynamic-link secure file hosting with client-side AES-256-GCM encryption",
-  "main": "server.js",
+  "version": "3.0.0",
+  "private": true,
+  "description": "VaultLink monorepo (Next.js frontend + Express TypeScript backend)",
   "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
+    "dev": "concurrently \"npm run dev --prefix backend\" \"npm run dev --prefix frontend\"",
+    "dev:frontend": "npm run dev --prefix frontend",
+    "dev:backend": "npm run dev --prefix backend",
+    "build": "npm run build --prefix backend && npm run build --prefix frontend",
+    "start": "npm run start --prefix backend"
   },
   "engines": {
     "node": ">=20"
   },
-  "dependencies": {
-    "express": "^4.21.2",
-    "express-rate-limit": "^7.5.0",
-    "multer": "^2.0.2"
+  "devDependencies": {
+    "concurrently": "^9.1.2"
   }
 }
