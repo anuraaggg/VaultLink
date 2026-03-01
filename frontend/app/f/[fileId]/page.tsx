@@ -2,6 +2,7 @@
 
 import { use, useMemo, useState } from "react";
 import { fromBase64, fromBase64Url } from "@/lib/crypto";
+import VaultMark from "@/components/VaultMark";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
 
@@ -97,7 +98,10 @@ export default function FileDecryptPage({ params }: { params: Promise<{ fileId: 
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-2xl flex-col justify-center p-6">
-      <h1 className="mb-2 text-3xl font-bold tracking-tight text-neutral-100">VaultLink</h1>
+      <div className="mb-2 flex items-center gap-3">
+        <VaultMark className="h-10 w-10" />
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-100">VaultLink</h1>
+      </div>
       <p className="mb-6 text-sm font-medium text-neutral-300">Decrypt file locally in your browser.</p>
 
       <section className="rounded-2xl border border-neutral-800 bg-black/80 p-6 backdrop-blur">
@@ -106,6 +110,7 @@ export default function FileDecryptPage({ params }: { params: Promise<{ fileId: 
 
         <label className="mb-2 block text-sm font-medium text-neutral-200">Decryption key</label>
         <input
+          suppressHydrationWarning
           type="text"
           value={keyText}
           onChange={(event) => setKeyText(event.target.value)}

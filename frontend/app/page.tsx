@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { toBase64, toBase64Url } from "@/lib/crypto";
+import VaultMark from "@/components/VaultMark";
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:4000";
@@ -150,7 +151,10 @@ export default function UploadPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col justify-center p-6">
-      <h1 className="mb-2 text-3xl font-bold tracking-tight text-neutral-100">VaultLink</h1>
+      <div className="mb-2 flex items-center gap-3">
+        <VaultMark className="h-10 w-10" />
+        <h1 className="text-3xl font-bold tracking-tight text-neutral-100">VaultLink</h1>
+      </div>
       <p className="mb-6 text-sm font-medium text-neutral-300">Private file sharing with local AES-256-GCM encryption.</p>
 
       <section className="rounded-2xl border border-neutral-800 bg-black/80 p-6 backdrop-blur">
@@ -158,6 +162,7 @@ export default function UploadPage() {
 
         <label className="mb-3 block text-sm font-medium text-neutral-200">Select file (max 50MB)</label>
         <input
+          suppressHydrationWarning
           className="mb-4 block w-full rounded-lg border border-neutral-700 bg-black px-3 py-2 text-sm font-medium text-neutral-100 outline-none focus:border-neutral-500"
           type="file"
           onChange={(event) => onSelectFile(event.target.files?.[0] ?? null)}
@@ -175,6 +180,7 @@ export default function UploadPage() {
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-300">Expiry minutes (1-60)</label>
             <input
+              suppressHydrationWarning
               className="w-full rounded-lg border border-neutral-700 bg-black px-3 py-2 text-sm font-medium text-neutral-100 outline-none focus:border-neutral-500"
               type="number"
               min={1}
@@ -186,6 +192,7 @@ export default function UploadPage() {
           <div>
             <label className="mb-1 block text-xs font-medium text-neutral-300">Max downloads (1-1000)</label>
             <input
+              suppressHydrationWarning
               className="w-full rounded-lg border border-neutral-700 bg-black px-3 py-2 text-sm font-medium text-neutral-100 outline-none focus:border-neutral-500"
               type="number"
               min={1}
